@@ -1,0 +1,38 @@
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { errorHandler, notFound } from "./middlewares/error.middleware.js";
+import categoriasRouter from "./routes/categorias.routes.js";
+import productosRouter from "./routes/productos.routes.js";
+
+const app = express();
+
+// Middlewares de seguridad
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+// Rate limit en /auth (evita ataques de fuerza bruta)
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+app.use("/auth", authLimiter);
+
+// Middleware de logs (registra cada petición)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Ruta de salud (para saber si el servidor está vivo)
+app.get("/health", (req, res) => {
+  res.json({ ok: true, mensaje: "InvenPro API funcionando" });
+});
+// Rutas
+app.use("/categorias", categoriasRouter);
+app.use("/productos", productosRouter);
+
+// Manejo de 404 y errores (SIEMPRE al final)
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;
