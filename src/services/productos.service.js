@@ -18,7 +18,6 @@ export const productosService = {
   },
 
   actualizar: (id, data) => {
-    // El stock NO se puede editar directamente
     delete data.stock_actual;
     const p = productosRepo.update(id, data);
     if (!p) throw new AppError("Producto no encontrado", 404);
