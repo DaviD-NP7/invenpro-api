@@ -5,21 +5,26 @@ import {
   crearProductoSchema,
   actualizarProductoSchema,
 } from "../validators/productos.validator.js";
+import { autenticar, soloAdmin } from "../middlewares/auth.middleware.js";
 
 const router = Router();
+
+router.use(autenticar); // todas requieren token
 
 router.get("/", productosController.listar);
 router.get("/:id", productosController.obtener);
 router.post(
   "/",
+  soloAdmin,
   validate(crearProductoSchema, "body"),
   productosController.crear
 );
 router.patch(
   "/:id",
+  soloAdmin,
   validate(actualizarProductoSchema, "body"),
   productosController.actualizar
 );
-router.delete("/:id", productosController.eliminar);
+router.delete("/:id", soloAdmin, productosController.eliminar);
 
 export default router;
