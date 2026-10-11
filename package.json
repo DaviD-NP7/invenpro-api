@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --test tests/",
+    "test": "DB_PATH=./data/test.sqlite node --test tests/*.test.js",
     "dev": "node --watch --env-file=.env src/server.js",
     "start": "node --env-file=.env src/server.js",
     "seed": "node seed/seed.js"
