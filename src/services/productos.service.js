@@ -25,8 +25,8 @@ export const productosService = {
   },
 
   eliminar: (id) => {
-    const p = productosRepo.remove(id);
-    if (!p) throw new AppError("Producto no encontrado", 404);
-    return p;
+    const ok = productosRepo.remove(id);
+    if (!ok) throw new AppError("Producto no encontrado", 404);
+    return true;
   },
 };

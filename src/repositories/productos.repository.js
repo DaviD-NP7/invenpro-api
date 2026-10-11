@@ -1,97 +1,109 @@
-let productos = [
-  {
-    id: 1,
-    sku: "P001",
-    nombre: "Arroz 1kg",
-    precio_venta: 4.5,
-    precio_compra: 3.2,
-    stock_actual: 20,
-    stock_minimo: 5,
-    categoria_id: 1,
-    activo: 1,
-  },
-  {
-    id: 2,
-    sku: "P002",
-    nombre: "Aceite 1L",
-    precio_venta: 9.0,
-    precio_compra: 7.5,
-    stock_actual: 8,
-    stock_minimo: 3,
-    categoria_id: 1,
-    activo: 1,
-  },
-  {
-    id: 3,
-    sku: "P003",
-    nombre: "Leche 1L",
-    precio_venta: 5.5,
-    precio_compra: 4.0,
-    stock_actual: 3,
-    stock_minimo: 5,
-    categoria_id: 3,
-    activo: 1,
-  },
-  {
-    id: 4,
-    sku: "P004",
-    nombre: "Gaseosa 3L",
-    precio_venta: 12.0,
-    precio_compra: 9.0,
-    stock_actual: 15,
-    stock_minimo: 5,
-    categoria_id: 2,
-    activo: 1,
-  },
-];
-let nextId = 5;
+import { db } from "../config/database.js";
 
 export const productosRepo = {
   findAll: (filtros = {}) => {
-    let resultado = productos.filter((p) => p.activo === 1);
+    let sql = `
+      SELECT p.*, c.nombre AS categoria_nombre
+      FROM productos p
+      LEFT JOIN categorias c ON c.id = p.categoria_id
+      WHERE p.activo = 1
+    `;
+    const params = [];
 
     if (filtros.buscar) {
-      const texto = filtros.buscar.toLowerCase();
-      resultado = resultado.filter((p) =>
-        p.nombre.toLowerCase().includes(texto)
-      );
+      sql += " AND p.nombre LIKE ?";
+      params.push(`%${filtros.buscar}%`);
     }
     if (filtros.categoria) {
-      resultado = resultado.filter(
-        (p) => p.categoria_id === Number(filtros.categoria)
-      );
+      sql += " AND p.categoria_id = ?";
+      params.push(Number(filtros.categoria));
     }
     if (filtros.bajo_stock === "true") {
-      resultado = resultado.filter((p) => p.stock_actual <= p.stock_minimo);
+      sql += " AND p.stock_actual <= p.stock_minimo";
     }
 
-    // Ordenamiento
     if (filtros.orden === "precio") {
-      resultado.sort((a, b) => a.precio_venta - b.precio_venta);
+      sql += " ORDER BY p.precio_venta ASC";
     } else if (filtros.orden === "nombre") {
-      resultado.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      sql += " ORDER BY p.nombre ASC";
+    } else {
+      sql += " ORDER BY p.id ASC";
     }
 
-    return resultado;
+    return db.prepare(sql).all(...params);
   },
-  findById: (id) =>
-    productos.find((p) => p.id === Number(id) && p.activo === 1),
+
+  findById: (id) => {
+    return db
+      .prepare(
+        `
+      SELECT p.*, c.nombre AS categoria_nombre
+      FROM productos p
+      LEFT JOIN categorias c ON c.id = p.categoria_id
+      WHERE p.id = ? AND p.activo = 1
+    `
+      )
+      .get(id);
+  },
+
   create: (data) => {
-    const nuevo = { id: nextId++, ...data, stock_actual: 0, activo: 1 };
-    productos.push(nuevo);
-    return nuevo;
+    const result = db
+      .prepare(
+        `
+      INSERT INTO productos (sku, nombre, precio_venta, precio_compra, categoria_id, stock_minimo, stock_actual)
+      VALUES (?, ?, ?, ?, ?, ?, 0)
+    `
+      )
+      .run(
+        data.sku,
+        data.nombre,
+        data.precio_venta,
+        data.precio_compra,
+        data.categoria_id,
+        data.stock_minimo || 0
+      );
+    return productosRepo.findById(result.lastInsertRowid);
   },
+
   update: (id, data) => {
-    const p = productos.find((x) => x.id === Number(id) && x.activo === 1);
-    if (!p) return null;
-    Object.assign(p, data);
-    return p;
+    const campos = [];
+    const valores = [];
+    const permitidos = [
+      "sku",
+      "nombre",
+      "precio_venta",
+      "precio_compra",
+      "categoria_id",
+      "stock_minimo",
+    ];
+
+    for (const campo of permitidos) {
+      if (data[campo] !== undefined) {
+        campos.push(`${campo} = ?`);
+        valores.push(data[campo]);
+      }
+    }
+
+    if (campos.length === 0) return productosRepo.findById(id);
+
+    valores.push(id);
+    db.prepare(
+      `UPDATE productos SET ${campos.join(", ")} WHERE id = ? AND activo = 1`
+    ).run(...valores);
+    return productosRepo.findById(id);
   },
+
   remove: (id) => {
-    const p = productos.find((x) => x.id === Number(id) && x.activo === 1);
-    if (!p) return null;
-    p.activo = 0;
-    return p;
+    const result = db
+      .prepare("UPDATE productos SET activo = 0 WHERE id = ? AND activo = 1")
+      .run(id);
+    return result.changes > 0;
   },
-  existsSku: (sku) => productos.some((p) => p.sku === sku && p.activo === 1),
+
+  existsSku: (sku) => {
+    const row = db
+      .prepare("SELECT id FROM productos WHERE sku = ? AND activo = 1")
+      .get(sku);
+    return !!row;
+  },
 };
