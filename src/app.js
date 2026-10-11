@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { errorHandler, notFound } from "./middlewares/error.middleware.js";
+
+import authRouter from "./routes/auth.routes.js";
 import categoriasRouter from "./routes/categorias.routes.js";
 import productosRouter from "./routes/productos.routes.js";
 
@@ -17,17 +19,19 @@ app.use(express.json());
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 app.use("/auth", authLimiter);
 
-// Middleware de logs (registra cada petición)
+// Middleware de logs
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// Ruta de salud (para saber si el servidor está vivo)
+// Ruta de salud
 app.get("/health", (req, res) => {
   res.json({ ok: true, mensaje: "InvenPro API funcionando" });
 });
+
 // Rutas
+app.use("/auth", authRouter);
 app.use("/categorias", categoriasRouter);
 app.use("/productos", productosRouter);
 
