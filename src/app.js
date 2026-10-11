@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.routes.js";
 import categoriasRouter from "./routes/categorias.routes.js";
 import productosRouter from "./routes/productos.routes.js";
 import movimientosRouter from "./routes/movimientos.routes.js";
+import reportesRouter from "./routes/reportes.routes.js";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use("/movimientos", movimientosRouter);
+app.use("/reportes", reportesRouter);
 
 // Rate limit en /auth (evita ataques de fuerza bruta)
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
