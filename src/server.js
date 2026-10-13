@@ -8,14 +8,14 @@ import bcrypt from "bcrypt";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
-// Ejecutar migraciones automáticamente al arrancar
+// Migraciones automáticas
 const migracion = fs.readFileSync(
   path.join(__dirname, "../migrations/001_crear_tablas.sql"),
   "utf-8"
 );
 db.exec(migracion);
 
-// Auto-seed: si no hay usuarios, cargar datos iniciales
+// Auto-seed si la BD está vacía
 const { total } = db.prepare("SELECT COUNT(*) AS total FROM usuarios").get();
 if (total === 0) {
   console.log("🌱 Base de datos vacía. Ejecutando seed automático...");
@@ -66,19 +66,6 @@ if (total === 0) {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   productos.forEach((p) => insertProd.run(...p));
-
-  const movimientos = [
-    [1, 1, "entrada", 20, "Ingreso inicial"],
-    [2, 1, "entrada", 15, "Ingreso inicial"],
-    [9, 1, "salida", 2, "Venta mostrador"],
-    [3, 1, "salida", 3, "Venta mostrador"],
-    [6, 2, "entrada", 15, "Reposición de stock"],
-  ];
-  const insertMov = db.prepare(`
-    INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad, motivo)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  movimientos.forEach((m) => insertMov.run(...m));
 
   console.log("✅ Seed automático completado");
 }
